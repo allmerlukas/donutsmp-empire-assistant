@@ -52,30 +52,6 @@ module.exports = {
       const gameId = parts[2];
       await handleRouletteParty(interaction, client, action, gameId);
     }
-
-    // ─── Texas Hold'em buttons ────────────────────────────────────────────────
-    if (interaction.isButton() && interaction.customId.startsWith('th_')) {
-      const raw = interaction.customId.slice(3); // remove 'th_'
-      const sep = raw.indexOf('_');
-      const action = raw.slice(0, sep);
-      const gameId = raw.slice(sep + 1);
-      await handleTexasHoldem(interaction, client, action, gameId);
-    }
-
-    // ─── Five Card Draw buttons ───────────────────────────────────────────────
-    if (interaction.isButton() && interaction.customId.startsWith('fcd_')) {
-      const raw = interaction.customId.slice(4); // remove 'fcd_'
-      const sep = raw.indexOf('_');
-      const action = raw.slice(0, sep);
-      const gameId = raw.slice(sep + 1);
-      await handleFiveCardDraw(interaction, client, action, gameId);
-    }
-
-    // ─── Five Card Draw select menu ───────────────────────────────────────────
-    if (interaction.isStringSelectMenu() && interaction.customId.startsWith('fcdswap_')) {
-      const gameId = interaction.customId.slice(8);
-      await handleFcdSwap(interaction, client, gameId);
-    }
   },
 };
 
@@ -99,14 +75,14 @@ async function handleBlackjack(interaction, client, action, gameId) {
     if (Object.keys(game.players).length >= game.maxPlayers)
       return interaction.reply({ content: '❌ The game is full.', flags: 64 });
 
-    const bal = await getBalance(interaction.user.id);
+    const bal = getBalance(interaction.user.id);
     if (bal < game.bet)
       return interaction.reply({
         content: `❌ You need **${game.bet.toLocaleString()} coins** to join. You have **${bal.toLocaleString()}**.`,
         flags: 64
       });
 
-    await removeBalance(interaction.user.id, game.bet);
+    removeBalance(interaction.user.id, game.bet);
     game.players[interaction.user.id] = {
       userId: interaction.user.id, hand: [], status: 'waiting', done: false
     };
@@ -140,7 +116,7 @@ async function handleBlackjack(interaction, client, action, gameId) {
 
     // Refund all players
     for (const p of Object.values(game.players))
-      await addBalance(p.userId, game.bet);
+      addBalance(p.userId, game.bet);
 
     deleteGame(gameId);
 
@@ -250,14 +226,14 @@ async function handleCoinflip(interaction, client, action, gameId, pickArg) {
     if (Object.keys(game.players).length >= game.maxPlayers)
       return interaction.reply({ content: '❌ The game is full.', flags: 64 });
 
-    const bal = await getBalance(interaction.user.id);
+    const bal = getBalance(interaction.user.id);
     if (bal < game.bet)
       return interaction.reply({
         content: `❌ You need **${game.bet.toLocaleString()} coins** to join. You have **${bal.toLocaleString()}**.`,
         flags: 64
       });
 
-    await removeBalance(interaction.user.id, game.bet);
+    removeBalance(interaction.user.id, game.bet);
     game.players[interaction.user.id] = { userId: interaction.user.id };
 
     const isFull = Object.keys(game.players).length >= game.maxPlayers;
@@ -291,7 +267,7 @@ async function handleCoinflip(interaction, client, action, gameId, pickArg) {
 
     // Refund all players
     for (const p of Object.values(game.players)) {
-      await addBalance(p.userId, game.bet);
+      addBalance(p.userId, game.bet);
     }
 
     deleteGame(gameId);
@@ -338,14 +314,14 @@ async function handleRouletteParty(interaction, client, action, gameId) {
     if (game.players[interaction.user.id])
       return interaction.reply({ content: '❌ You already placed a bet.', flags: 64 });
     
-    const bal = await getBalance(interaction.user.id);
+    const bal = getBalance(interaction.user.id);
     if (bal < game.bet)
       return interaction.reply({
         content: `❌ You need **${game.bet.toLocaleString()} coins** to bet.`,
         flags: 64
       });
 
-    await removeBalance(interaction.user.id, game.bet);
+    removeBalance(interaction.user.id, game.bet);
     game.players[interaction.user.id] = { userId: interaction.user.id, color: action };
 
     await interaction.update({
@@ -377,7 +353,7 @@ async function handleRouletteParty(interaction, client, action, gameId) {
       return interaction.reply({ content: '❌ Only the host can cancel.', flags: 64 });
 
     for (const p of Object.values(game.players)) {
-      await addBalance(p.userId, game.bet);
+      addBalance(p.userId, game.bet);
     }
     deleteGame(gameId);
 
@@ -395,189 +371,3 @@ async function handleRouletteParty(interaction, client, action, gameId) {
   }
 }
 
-
-// -----------------------------------------------------------------------------
-// Texas Hold em Handler
-// -----------------------------------------------------------------------------
-
-async function handleTexasHoldem(interaction, client, action, gameId) {
-  const { lobbyEmbed, lobbyButtons, tableEmbed, actionButtons, startGame, advancePhase, resolveGame } = require('../commands/texasholdem');
-  const { getBalance, removeBalance, addBalance } = require('../utils/economyStore');
-  const { getGame, updateGame, deleteGame } = require('../utils/gameStore');
-  const { displayCards } = require('../utils/pokerLogic');
-  let game = getGame(gameId);
-  if (action === 'join') {
-    if (!game || game.phase !== 'lobby') return interaction.reply({ content: 'Lobby is closed.', flags: 64 });
-    if (game.players[interaction.user.id]) return interaction.reply({ content: 'Already joined.', flags: 64 });
-    if (Object.keys(game.players).length >= game.maxPlayers) return interaction.reply({ content: 'Full.', flags: 64 });
-    const bal = await getBalance(interaction.user.id);
-    if (bal < game.bet) return interaction.reply({ content: `Need ${game.bet} coins.`, flags: 64 });
-    await removeBalance(interaction.user.id, game.bet);
-    game.players[interaction.user.id] = { userId: interaction.user.id, hand: [], folded: false, roundBet: 0 };
-    updateGame(gameId, { pot: game.pot + game.bet });
-    await interaction.update({ embeds: [lobbyEmbed(game)], components: [lobbyButtons(gameId, Object.keys(game.players).length >= game.maxPlayers)] });
-  } else if (action === 'start') {
-    if (!game || game.hostId !== interaction.user.id || game.phase !== 'lobby') return interaction.reply({ content: 'Cannot start.', flags: 64 });
-    if (Object.keys(game.players).length < 2) return interaction.reply({ content: 'Need 2+ players.', flags: 64 });
-    await interaction.deferUpdate(); await startGame(game, client);
-  } else if (action === 'cancel') {
-    if (!game || game.hostId !== interaction.user.id) return interaction.reply({ content: 'Cannot cancel.', flags: 64 });
-    for (const p of Object.values(game.players)) await addBalance(p.userId, game.bet);
-    deleteGame(gameId);
-    const { EmbedBuilder: E } = require('discord.js');
-    await interaction.update({ embeds: [new E().setColor(0xED4245).setTitle('Cancelled').setDescription('Bets refunded.')], components: [] });
-  } else if (action === 'peek') {
-    const player = game && game.players[interaction.user.id];
-    if (!player) return interaction.reply({ content: 'Not in game.', flags: 64 });
-    await interaction.reply({ content: `Your hole cards: ${displayCards(player.hand)}`, flags: 64 });
-  } else if (action === 'check') {
-    if (!game) return interaction.reply({ content: 'No game.', flags: 64 });
-    const active = Object.values(game.players).filter(p => !p.folded);
-    const cur = active[game.currentTurn % active.length];
-    if (cur?.userId !== interaction.user.id) return interaction.reply({ content: 'Not your turn.', flags: 64 });
-    const callAmt = Math.max(0, game.currentBet - (cur.roundBet || 0));
-    if (callAmt > 0) {
-      const bal = await getBalance(interaction.user.id);
-      if (bal < callAmt) return interaction.reply({ content: `Need ${callAmt} to call.`, flags: 64 });
-      await removeBalance(interaction.user.id, callAmt);
-      cur.roundBet = (cur.roundBet || 0) + callAmt;
-      updateGame(gameId, { pot: game.pot + callAmt });
-    }
-    updateGame(gameId, { currentTurn: game.currentTurn + 1 });
-    const g2 = getGame(gameId);
-    const rem = Object.values(g2.players).filter(p => !p.folded);
-    await interaction.deferUpdate();
-    if (rem.every(p => (p.roundBet || 0) >= g2.currentBet)) { await advancePhase(g2, client); }
-    else {
-      const nxt = rem[g2.currentTurn % rem.length];
-      await game.lobbyMsg.edit({ embeds: [tableEmbed(g2)], components: [actionButtons(gameId, g2.currentBet - (nxt.roundBet || 0))] });
-      await game.lobbyMsg.channel.send(`<@${nxt.userId}> your turn!`);
-    }
-  } else if (action === 'fold') {
-    if (!game) return interaction.reply({ content: 'No game.', flags: 64 });
-    const active = Object.values(game.players).filter(p => !p.folded);
-    const cur = active[game.currentTurn % active.length];
-    if (cur?.userId !== interaction.user.id) return interaction.reply({ content: 'Not your turn.', flags: 64 });
-    game.players[interaction.user.id].folded = true;
-    const stillIn = Object.values(game.players).filter(p => !p.folded);
-    updateGame(gameId, { currentTurn: game.currentTurn + 1 });
-    await interaction.deferUpdate();
-    if (stillIn.length <= 1) { await resolveGame(game, client, stillIn); }
-    else {
-      const g2 = getGame(gameId); const nxt = stillIn[g2.currentTurn % stillIn.length];
-      await game.lobbyMsg.edit({ embeds: [tableEmbed(g2)], components: [actionButtons(gameId, g2.currentBet - (nxt.roundBet || 0))] });
-      await game.lobbyMsg.channel.send(`<@${nxt.userId}> your turn!`);
-    }
-  } else if (action === 'raise') {
-    await interaction.reply({ content: `To raise, put in more than ${game ? game.currentBet : 0}. Modal raise coming soon!`, flags: 64 });
-  }
-}
-
-// -----------------------------------------------------------------------------
-// Five Card Draw Handler
-// -----------------------------------------------------------------------------
-
-async function handleFiveCardDraw(interaction, client, action, gameId) {
-  const { lobbyEmbed, lobbyButtons, tableEmbed, bettingButtons, drawButtons, startGame, startDrawPhase, startBettingRound2, resolveGame } = require('../commands/fivecarddraw');
-  const { getBalance, removeBalance, addBalance } = require('../utils/economyStore');
-  const { getGame, updateGame, deleteGame } = require('../utils/gameStore');
-  const { displayCards } = require('../utils/pokerLogic');
-  const { StringSelectMenuBuilder, ActionRowBuilder: AR } = require('discord.js');
-  let game = getGame(gameId);
-  if (action === 'join') {
-    if (!game || game.phase !== 'lobby') return interaction.reply({ content: 'Lobby closed.', flags: 64 });
-    if (game.players[interaction.user.id]) return interaction.reply({ content: 'Already joined.', flags: 64 });
-    if (Object.keys(game.players).length >= game.maxPlayers) return interaction.reply({ content: 'Full.', flags: 64 });
-    const bal = await getBalance(interaction.user.id);
-    if (bal < game.bet) return interaction.reply({ content: `Need ${game.bet} coins.`, flags: 64 });
-    await removeBalance(interaction.user.id, game.bet);
-    game.players[interaction.user.id] = { userId: interaction.user.id, hand: [], folded: false, roundBet: 0, swapped: false };
-    updateGame(gameId, { pot: game.pot + game.bet });
-    await interaction.update({ embeds: [lobbyEmbed(game)], components: [lobbyButtons(gameId, Object.keys(game.players).length >= game.maxPlayers)] });
-  } else if (action === 'start') {
-    if (!game || game.hostId !== interaction.user.id || game.phase !== 'lobby') return interaction.reply({ content: 'Cannot start.', flags: 64 });
-    if (Object.keys(game.players).length < 2) return interaction.reply({ content: 'Need 2+ players.', flags: 64 });
-    await interaction.deferUpdate(); await startGame(game, client);
-  } else if (action === 'cancel') {
-    if (!game || game.hostId !== interaction.user.id) return interaction.reply({ content: 'Cannot cancel.', flags: 64 });
-    for (const p of Object.values(game.players)) await addBalance(p.userId, game.bet);
-    deleteGame(gameId);
-    const { EmbedBuilder: E } = require('discord.js');
-    await interaction.update({ embeds: [new E().setColor(0xED4245).setTitle('Cancelled').setDescription('Bets refunded.')], components: [] });
-  } else if (action === 'peek') {
-    const player = game && game.players[interaction.user.id];
-    if (!player) return interaction.reply({ content: 'Not in game.', flags: 64 });
-    await interaction.reply({ content: `Your hand: ${displayCards(player.hand)}`, flags: 64 });
-  } else if (action === 'check') {
-    if (!game) return interaction.reply({ content: 'No game.', flags: 64 });
-    const active = Object.values(game.players).filter(p => !p.folded);
-    const cur = active[game.currentTurn % active.length];
-    if (cur?.userId !== interaction.user.id) return interaction.reply({ content: 'Not your turn.', flags: 64 });
-    const callAmt = Math.max(0, game.currentBet - (cur.roundBet || 0));
-    if (callAmt > 0) {
-      const bal = await getBalance(interaction.user.id);
-      if (bal < callAmt) return interaction.reply({ content: `Need ${callAmt} to call.`, flags: 64 });
-      await removeBalance(interaction.user.id, callAmt);
-      cur.roundBet = (cur.roundBet || 0) + callAmt;
-      updateGame(gameId, { pot: game.pot + callAmt });
-    }
-    updateGame(gameId, { currentTurn: game.currentTurn + 1 });
-    const g2 = getGame(gameId);
-    const rem = Object.values(g2.players).filter(p => !p.folded);
-    await interaction.deferUpdate();
-    if (rem.every(p => (p.roundBet || 0) >= g2.currentBet)) {
-      if (g2.phase === 'betting1') await startDrawPhase(g2, client); else await resolveGame(g2, client);
-    } else {
-      const nxt = rem[g2.currentTurn % rem.length];
-      await game.lobbyMsg.edit({ embeds: [tableEmbed(g2)], components: [bettingButtons(gameId, g2.currentBet - (nxt.roundBet || 0))] });
-      await game.lobbyMsg.channel.send(`<@${nxt.userId}> your turn!`);
-    }
-  } else if (action === 'fold') {
-    if (!game) return interaction.reply({ content: 'No game.', flags: 64 });
-    const active = Object.values(game.players).filter(p => !p.folded);
-    const cur = active[game.currentTurn % active.length];
-    if (cur?.userId !== interaction.user.id) return interaction.reply({ content: 'Not your turn.', flags: 64 });
-    game.players[interaction.user.id].folded = true;
-    const stillIn = Object.values(game.players).filter(p => !p.folded);
-    updateGame(gameId, { currentTurn: game.currentTurn + 1 });
-    await interaction.deferUpdate();
-    if (stillIn.length <= 1) { await resolveGame(game, client); }
-    else {
-      const g2 = getGame(gameId); const nxt = stillIn[g2.currentTurn % stillIn.length];
-      await game.lobbyMsg.edit({ embeds: [tableEmbed(g2)], components: [bettingButtons(gameId, g2.currentBet - (nxt.roundBet || 0))] });
-      await game.lobbyMsg.channel.send(`<@${nxt.userId}> your turn!`);
-    }
-  } else if (action === 'keepall') {
-    const player = game && game.players[interaction.user.id];
-    if (!game || game.phase !== 'draw' || !player || player.swapped) return interaction.reply({ content: 'Cannot keep all now.', flags: 64 });
-    player.swapped = true;
-    await interaction.reply({ content: 'Kept all cards!', flags: 64 });
-    const g2 = getGame(gameId);
-    if (Object.values(g2.players).filter(p => !p.folded).every(p => p.swapped)) await startBettingRound2(g2, client);
-    else await game.lobbyMsg.edit({ embeds: [tableEmbed(g2)], components: [drawButtons(gameId)] });
-  } else if (action === 'swap') {
-    const player = game && game.players[interaction.user.id];
-    if (!game || game.phase !== 'draw' || !player || player.swapped) return interaction.reply({ content: 'Cannot swap now.', flags: 64 });
-    const opts = player.hand.map((c, i) => ({ label: c.display, value: String(i), description: `Card ${i+1}` }));
-    const menu = new StringSelectMenuBuilder().setCustomId(`fcdswap_${gameId}`).setPlaceholder('Pick up to 3 cards to discard').setMinValues(1).setMaxValues(Math.min(3, opts.length)).addOptions(opts);
-    await interaction.reply({ content: 'Select up to 3 cards to discard:', components: [new AR().addComponents(menu)], flags: 64 });
-  }
-}
-
-async function handleFcdSwap(interaction, client, gameId) {
-  const { startBettingRound2, tableEmbed, drawButtons } = require('../commands/fivecarddraw');
-  const { getGame, updateGame } = require('../utils/gameStore');
-  const game = getGame(gameId);
-  if (!game || game.phase !== 'draw') return interaction.update({ content: 'Draw phase over.', components: [] });
-  const player = game.players[interaction.user.id];
-  if (!player || player.swapped) return interaction.update({ content: 'Already decided.', components: [] });
-  const idxs = interaction.values.map(Number);
-  const deck = game.deck;
-  player.hand = player.hand.map((c, i) => idxs.includes(i) ? deck.shift() : c);
-  player.swapped = true;
-  updateGame(gameId, { deck });
-  await interaction.update({ content: `Discarded ${idxs.length} card(s). Click Peek at Cards to see your new hand.`, components: [] });
-  const g2 = getGame(gameId);
-  if (Object.values(g2.players).filter(p => !p.folded).every(p => p.swapped)) await startBettingRound2(g2, client);
-  else await game.lobbyMsg.edit({ embeds: [tableEmbed(g2)], components: [drawButtons(gameId)] });
-}

@@ -15,7 +15,7 @@ module.exports = {
 
     if (target.bot) return interaction.reply({ content: '❌ Bots do not have a rank.', flags: 64 });
 
-    const newData = await removePoints(target.id, amount);
+    const newData = removePoints(target.id, amount);
 
     const embed = new EmbedBuilder()
       .setColor(0xED4245)

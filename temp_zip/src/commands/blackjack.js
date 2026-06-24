@@ -196,13 +196,13 @@ async function checkAllDone(game, client) {
       outcome = '❌ BUST';     payout = 0;
     } else if (pBJ && !dealerBJ) {
       outcome = '🃏 BLACKJACK'; payout = Math.floor(game.bet * 2.5);
-      await addBalance(p.userId, payout);
+      addBalance(p.userId, payout);
     } else if (dealerBust || pTotal > dealerTotal) {
       outcome = '✅ WIN';       payout = game.bet * 2;
-      await addBalance(p.userId, payout);
+      addBalance(p.userId, payout);
     } else if (pTotal === dealerTotal) {
       outcome = '🤝 TIE';      payout = game.bet;
-      await addBalance(p.userId, payout);
+      addBalance(p.userId, payout);
     } else {
       outcome = '❌ LOSE';     payout = 0;
     }
@@ -259,7 +259,7 @@ module.exports = {
       return interaction.reply({ content: '❌ You already have an active game.', flags: 64 });
 
     // Check balance
-    const balance = await getBalance(interaction.user.id);
+    const balance = getBalance(interaction.user.id);
     if (balance < bet)
       return interaction.reply({ content: `❌ You only have **${balance.toLocaleString()} coins**.`, flags: 64 });
 
@@ -267,7 +267,7 @@ module.exports = {
     const id   = newGameId();
     const game = createGame({ gameId: id, hostId: interaction.user.id, bet, maxPlayers, channelId: interaction.channelId });
 
-    await removeBalance(interaction.user.id, bet);
+    removeBalance(interaction.user.id, bet);
     game.players[interaction.user.id] = {
       userId: interaction.user.id, hand: [], status: 'waiting', done: false
     };

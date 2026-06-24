@@ -1,55 +1,52 @@
 /**
- * economyStore.js — persists coin balances to data/economy.json
- * Everyone starts with 100 coins on first use.
+ * economyStore.js — persists coin balances to Supabase
+ * All functions are async.
  */
 
-const fs   = require('fs');
-const path = require('path');
+const supabase = require('./supabase');
 
-const FILE             = path.join(__dirname, '..', '..', 'data', 'economy.json');
 const STARTING_BALANCE = 100;
 
-function load() {
-  try {
-    if (!fs.existsSync(FILE)) return {};
-    return JSON.parse(fs.readFileSync(FILE, 'utf8'));
-  } catch { return {}; }
-}
+async function getBalance(userId) {
+  const { data, error } = await supabase
+    .from('economy')
+    .select('balance')
+    .eq('user_id', userId)
+    .single();
 
-function save(data) {
-  fs.mkdirSync(path.dirname(FILE), { recursive: true });
-  fs.writeFileSync(FILE, JSON.stringify(data, null, 2));
-}
-
-function getBalance(userId) {
-  const data = load();
-  if (data[userId] === undefined) {
-    data[userId] = STARTING_BALANCE;
-    save(data);
+  if (error || !data) {
+    // First time user — create row
+    await supabase.from('economy').upsert({ user_id: userId, balance: STARTING_BALANCE });
+    return STARTING_BALANCE;
   }
-  return data[userId];
+  return data.balance;
 }
 
-function setBalance(userId, amount) {
-  const data = load();
-  data[userId] = Math.max(0, Math.round(amount));
-  save(data);
-  return data[userId];
+async function setBalance(userId, amount) {
+  const val = Math.max(0, Math.round(amount));
+  await supabase.from('economy').upsert({ user_id: userId, balance: val });
+  return val;
 }
 
-function addBalance(userId, amount) {
-  return setBalance(userId, getBalance(userId) + amount);
+async function addBalance(userId, amount) {
+  const current = await getBalance(userId);
+  return setBalance(userId, current + amount);
 }
 
-function removeBalance(userId, amount) {
-  return setBalance(userId, getBalance(userId) - amount);
+async function removeBalance(userId, amount) {
+  const current = await getBalance(userId);
+  return setBalance(userId, current - amount);
 }
 
-function getLeaderboard() {
-  const data = load();
-  return Object.entries(data)
-    .map(([userId, balance]) => ({ userId, balance }))
-    .sort((a, b) => b.balance - a.balance);
+async function getLeaderboard() {
+  const { data, error } = await supabase
+    .from('economy')
+    .select('user_id, balance')
+    .order('balance', { ascending: false })
+    .limit(10);
+
+  if (error || !data) return [];
+  return data.map(r => ({ userId: r.user_id, balance: r.balance }));
 }
 
 module.exports = { getBalance, setBalance, addBalance, removeBalance, getLeaderboard, STARTING_BALANCE };

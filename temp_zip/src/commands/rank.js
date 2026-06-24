@@ -11,7 +11,7 @@ module.exports = {
     const target = interaction.options.getUser('user') ?? interaction.user;
     if (target.bot) return interaction.reply({ content: '❌ Bots do not have a rank.', flags: 64 });
 
-    const data = await getUserLevel(target.id);
+    const data = getUserLevel(target.id);
     const requiredXp = getXpRequirement(data.level);
 
     // Create a simple text-based progress bar

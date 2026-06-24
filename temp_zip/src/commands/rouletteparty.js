@@ -107,7 +107,7 @@ async function startGame(game, client) {
   for (const p of Object.values(game.players)) {
     if (p.color === result.c) {
       const payout = result.c === 'green' ? game.bet * 14 : game.bet * 2;
-      await addBalance(p.userId, payout);
+      addBalance(p.userId, payout);
       winners.push(`<@${p.userId}> (+${payout.toLocaleString()})`);
       totalPayout += payout;
     }

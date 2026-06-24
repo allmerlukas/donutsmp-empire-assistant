@@ -12,12 +12,12 @@ module.exports = {
   async execute(interaction) {
     await interaction.deferReply();
     const target = interaction.options.getUser('user');
-    const lb     = await getLeaderboard();
+    const lb     = getLeaderboard();
 
     // --- Single player lookup ---
     if (target) {
       const rank = lb.findIndex(e => e.userId === target.id) + 1;
-      const bal  = await getBalance(target.id);
+      const bal  = getBalance(target.id);
 
       const embed = new EmbedBuilder()
         .setColor(0xF1C40F)

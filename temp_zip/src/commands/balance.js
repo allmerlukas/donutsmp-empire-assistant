@@ -13,7 +13,7 @@ module.exports = {
 
   async execute(interaction) {
     const target = interaction.options.getUser('user') ?? interaction.user;
-    const bal    = await getBalance(target.id);
+    const bal    = getBalance(target.id);
 
     const embed = new EmbedBuilder()
       .setColor(0xF1C40F)

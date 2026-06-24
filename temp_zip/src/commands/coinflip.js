@@ -96,7 +96,7 @@ async function resolveGame(game, client, clickerId, sidePicked) {
   const winnerId = clickerSide === result ? clickerId : otherId;
   
   const pot = game.bet * 2;
-  await addBalance(winnerId, pot);
+  addBalance(winnerId, pot);
 
   const embed = new EmbedBuilder()
     .setColor(0x57F287)
@@ -132,14 +132,14 @@ module.exports = {
     if (getGameByUser(interaction.user.id))
       return interaction.reply({ content: '❌ You already have an active game.', flags: 64 });
 
-    const balance = await getBalance(interaction.user.id);
+    const balance = getBalance(interaction.user.id);
     if (balance < bet)
       return interaction.reply({ content: `❌ You only have **${balance.toLocaleString()} coins**.`, flags: 64 });
 
     const id   = newGameId();
     const game = createGame({ gameId: id, type: 'coinflip', hostId: interaction.user.id, bet, maxPlayers: 2, channelId: interaction.channelId });
 
-    await removeBalance(interaction.user.id, bet);
+    removeBalance(interaction.user.id, bet);
     game.players[interaction.user.id] = {
       userId: interaction.user.id
     };

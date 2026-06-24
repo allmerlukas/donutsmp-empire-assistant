@@ -22,12 +22,12 @@ module.exports = {
     const amount = interaction.options.getInteger('amount');
     const target = interaction.options.getUser('user') ?? interaction.user;
 
-    await addBalance(target.id, amount);
+    addBalance(target.id, amount);
 
     const embed = new EmbedBuilder()
       .setColor(0x2ECC71)
       .setTitle('🪄 Coins Spawned!')
-      .setDescription(`Successfully spawned **${amount.toLocaleString()} coins** for **${target.displayName}**.\n\nNew balance: **${(await getBalance(target.id)).toLocaleString()} coins**`)
+      .setDescription(`Successfully spawned **${amount.toLocaleString()} coins** for **${target.displayName}**.\n\nNew balance: **${getBalance(target.id).toLocaleString()} coins**`)
       .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });

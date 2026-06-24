@@ -21,12 +21,12 @@ module.exports = {
     if (target.bot)
       return interaction.reply({ content: '❌ You cannot gift bots.', flags: 64 });
 
-    const balance = await getBalance(interaction.user.id);
+    const balance = getBalance(interaction.user.id);
     if (balance < amount)
       return interaction.reply({ content: `❌ You only have **${balance.toLocaleString()} coins**.`, flags: 64 });
 
-    await removeBalance(interaction.user.id, amount);
-    await addBalance(target.id, amount);
+    removeBalance(interaction.user.id, amount);
+    addBalance(target.id, amount);
 
     const embed = new EmbedBuilder()
       .setColor(0x2ECC71)
@@ -35,8 +35,8 @@ module.exports = {
         `**${interaction.user.displayName}** gifted **${amount.toLocaleString()} coins** to **${target.displayName}**!`
       )
       .addFields(
-        { name: 'Your balance',              value: `${(await getBalance(interaction.user.id)).toLocaleString()} coins`, inline: true },
-        { name: `${target.displayName}'s balance`, value: `${(await getBalance(target.id)).toLocaleString()} coins`,  inline: true }
+        { name: 'Your balance',              value: `${getBalance(interaction.user.id).toLocaleString()} coins`, inline: true },
+        { name: `${target.displayName}'s balance`, value: `${getBalance(target.id).toLocaleString()} coins`,  inline: true }
       )
       .setTimestamp();
 

@@ -44,10 +44,10 @@ module.exports = {
     const bet = interaction.options.getInteger('bet');
     const color = interaction.options.getString('color');
 
-    const bal = await getBalance(interaction.user.id);
+    const bal = getBalance(interaction.user.id);
     if (bal < bet) return interaction.reply({ content: `❌ You only have **${bal.toLocaleString()} coins**.`, flags: 64 });
 
-    await removeBalance(interaction.user.id, bet);
+    removeBalance(interaction.user.id, bet);
 
     const spinEmbed = new EmbedBuilder()
       .setColor(0xF1C40F)
@@ -90,7 +90,7 @@ module.exports = {
     if (won) {
       if (color === 'green') payout = bet * 14;
       else payout = bet * 2;
-      await addBalance(interaction.user.id, payout);
+      addBalance(interaction.user.id, payout);
     }
 
     const finalEmbed = new EmbedBuilder()
