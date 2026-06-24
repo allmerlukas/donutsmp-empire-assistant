@@ -20,7 +20,9 @@ const rest = new REST().setToken(process.env.DISCORD_TOKEN);
       { body: commands },
     );
     console.log('✅ Commands deployed globally. May take up to 1 hour to appear in all servers.');
+    process.exit(0);
   } catch (err) {
     console.error(err);
+    process.exit(1);
   }
 })();
