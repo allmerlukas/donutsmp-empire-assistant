@@ -103,8 +103,8 @@ async function resolveGame(game, client, clickerId, sidePicked) {
     .setTitle(`🪙 Coinflip Result: It's ${resultStr}!`)
     .setDescription(`🎉 **<@${winnerId}> won ${pot.toLocaleString()} coins!** 🎉`)
     .addFields(
-      { name: `<@${clickerId}>`, value: `Picked: **${clickerSide.toUpperCase()}**`, inline: true },
-      { name: `<@${otherId}>`, value: `Assigned: **${otherSide.toUpperCase()}**`, inline: true }
+      { name: 'Player 1', value: `<@${clickerId}>\nPicked: **${clickerSide.toUpperCase()}**`, inline: true },
+      { name: 'Player 2', value: `<@${otherId}>\nAssigned: **${otherSide.toUpperCase()}**`, inline: true }
     )
     .setTimestamp();
 
