@@ -44,6 +44,14 @@ module.exports = {
       }
       await handleCoinflip(interaction, client, action, gameId, arg);
     }
+
+    // ─── Party Roulette buttons ───────────────────────────────────────────────
+    if (interaction.isButton() && interaction.customId.startsWith('rlp_')) {
+      const parts  = interaction.customId.split('_'); // ['rlp', action, gameId]
+      const action = parts[1];
+      const gameId = parts[2];
+      await handleRouletteParty(interaction, client, action, gameId);
+    }
   },
 };
 
@@ -289,3 +297,77 @@ async function handleCoinflip(interaction, client, action, gameId, pickArg) {
     await resolveGame(game, client, interaction.user.id, pickArg);
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function handleRouletteParty(interaction, client, action, gameId) {
+  const { startGame, lobbyEmbed, lobbyButtons } = require('../commands/rouletteparty');
+  const { getBalance, removeBalance, addBalance } = require('../utils/economyStore');
+  const { getGame, deleteGame } = require('../utils/gameStore');
+
+  const game = getGame(gameId);
+
+  // ── BETTING (Red / Black / Green) ─────────────────────────────────────────
+  if (['red', 'black', 'green'].includes(action)) {
+    if (!game || game.phase !== 'lobby')
+      return interaction.reply({ content: '❌ This lobby is no longer open.', flags: 64 });
+    if (game.players[interaction.user.id])
+      return interaction.reply({ content: '❌ You already placed a bet.', flags: 64 });
+    
+    const bal = getBalance(interaction.user.id);
+    if (bal < game.bet)
+      return interaction.reply({
+        content: `❌ You need **${game.bet.toLocaleString()} coins** to bet.`,
+        flags: 64
+      });
+
+    removeBalance(interaction.user.id, game.bet);
+    game.players[interaction.user.id] = { userId: interaction.user.id, color: action };
+
+    await interaction.update({
+      embeds: [lobbyEmbed(game)],
+      components: lobbyButtons(gameId)
+    });
+  }
+
+  // ── START ─────────────────────────────────────────────────────────────────
+  else if (action === 'start') {
+    if (!game)
+      return interaction.reply({ content: '❌ Game not found.', flags: 64 });
+    if (game.hostId !== interaction.user.id)
+      return interaction.reply({ content: '❌ Only the host can start the game.', flags: 64 });
+    if (game.phase !== 'lobby')
+      return interaction.reply({ content: '❌ The game has already started.', flags: 64 });
+    if (Object.keys(game.players).length === 0)
+      return interaction.reply({ content: '❌ At least one person must bet to start.', flags: 64 });
+
+    await interaction.deferUpdate();
+    await startGame(game, client);
+  }
+
+  // ── CANCEL ────────────────────────────────────────────────────────────────
+  else if (action === 'cancel') {
+    if (!game)
+      return interaction.reply({ content: '❌ Game not found.', flags: 64 });
+    if (game.hostId !== interaction.user.id)
+      return interaction.reply({ content: '❌ Only the host can cancel.', flags: 64 });
+
+    for (const p of Object.values(game.players)) {
+      addBalance(p.userId, game.bet);
+    }
+    deleteGame(gameId);
+
+    const { EmbedBuilder } = require('discord.js');
+    await interaction.update({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(0xED4245)
+          .setTitle('❌ Game Cancelled')
+          .setDescription('All bets have been refunded.')
+          .setTimestamp()
+      ],
+      components: []
+    });
+  }
+}
+
