@@ -14,12 +14,12 @@ const rest = new REST().setToken(process.env.DISCORD_TOKEN);
 
 (async () => {
   try {
-    console.log('Deploying slash commands to guild...');
+    console.log('Deploying slash commands globally...');
     await rest.put(
-      Routes.applicationGuildCommands(process.env.CLIENT_ID, '1460707418467209248'),
+      Routes.applicationCommands(process.env.CLIENT_ID),
       { body: commands },
     );
-    console.log('✅ Commands deployed to guild instantly.');
+    console.log('✅ Commands deployed globally. May take up to 1 hour to appear in all servers.');
   } catch (err) {
     console.error(err);
   }
