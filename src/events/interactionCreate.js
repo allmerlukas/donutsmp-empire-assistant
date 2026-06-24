@@ -40,7 +40,7 @@ async function handleBlackjack(interaction, client, action, gameId) {
   const {
     startGame, checkAllDone,
     lobbyEmbed, lobbyButtons,
-    playerHandEmbed, hitStandRow,
+    playerHandEmbed, hitStandRow, showHandRow,
   } = require('../commands/blackjack');
 
   const game = getGame(gameId);
@@ -108,6 +108,31 @@ async function handleBlackjack(interaction, client, action, gameId) {
           .setTimestamp()
       ],
       components: []
+    });
+  }
+
+  // ── SHOW HAND (ephemeral) ─────────────────────────────────────────────────
+  else if (action === 'hand') {
+    if (!game || game.phase !== 'playing')
+      return interaction.reply({ content: '❌ No active game.', flags: 64 });
+
+    const player = game.players[interaction.user.id];
+    if (!player)
+      return interaction.reply({ content: '❌ You are not in this game.', flags: 64 });
+
+    // Already done — just show final hand
+    if (player.done)
+      return interaction.reply({
+        embeds:     [playerHandEmbed(player)],
+        components: [],
+        flags:      64
+      });
+
+    // Show hand + Hit/Stand ephemerally
+    await interaction.reply({
+      embeds:     [playerHandEmbed(player)],
+      components: [hitStandRow(gameId)],
+      flags:      64
     });
   }
 

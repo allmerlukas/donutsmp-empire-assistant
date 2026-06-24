@@ -1,6 +1,9 @@
 /**
  * blackjack.js — Multiplayer blackjack command
  *
+ * Hand delivery is ephemeral (no DMs needed).
+ * Players click "Show My Hand" → ephemeral with Hit/Stand buttons.
+ *
  * Flow:
  *  1. /blackjack <bet> [max_players]  → public lobby embed, host auto-joins
  *  2. Others click Join (bet deducted immediately)
@@ -108,6 +111,16 @@ function hitStandRow(gameId, disabled = false) {
   );
 }
 
+function showHandRow(gameId) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`bj_hand_${gameId}`)
+      .setLabel('Show My Hand')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('🃏')
+  );
+}
+
 // ─── Game logic ──────────────────────────────────────────────────────────────
 
 /**
@@ -130,48 +143,12 @@ async function startGame(game, client) {
 
   game.dealer.hand = [deck.shift(), deck.shift()];
 
-  // DM every player their hand
-  for (const p of Object.values(game.players)) {
-    try {
-      const user = await client.users.fetch(p.userId);
-      const dm   = await user.createDM();
-      const msg  = await dm.send({
-        embeds:     [playerHandEmbed(p)],
-        components: p.done ? [] : [hitStandRow(game.gameId)]
-      });
-      p.dmChannelId  = dm.id;
-      p.dmMessageId  = msg.id;
-    } catch {
-      // DMs closed — auto-stand
-      p.status = 'stand';
-      p.done   = true;
-    }
-
-    // Auto-stand timeout
-    if (!p.done) {
-      p.timeout = setTimeout(async () => {
-        const g = getGame(game.gameId);
-        if (!g) return;
-        const pl = g.players[p.userId];
-        if (!pl || pl.done) return;
-        pl.status = 'stand';
-        pl.done   = true;
-        try {
-          const ch  = await client.channels.fetch(pl.dmChannelId);
-          const msg = await ch.messages.fetch(pl.dmMessageId);
-          await msg.edit({ embeds: [playerHandEmbed(pl)], components: [] });
-        } catch {}
-        await checkAllDone(g, client);
-      }, AUTO_STAND_MS);
-    }
-  }
-
-  // Update lobby → in-progress
+  // Update lobby → in-progress with ephemeral "Show My Hand" button
   const dealerCard = game.dealer.hand[0];
   const progress = new EmbedBuilder()
     .setColor(0xF1C40F)
     .setTitle('🃏 Blackjack — In Progress')
-    .setDescription('Players: check your DMs and use the **Hit / Stand** buttons!')
+    .setDescription('Click **Show My Hand** below to see your cards and play your turn!')
     .addFields(
       { name: 'Dealer shows', value: `\`${dealerCard.value}${dealerCard.suit}\` 🂠` },
       { name: 'Players', value: Object.values(game.players).map(p => `<@${p.userId}> — playing...`).join('\n') }
@@ -179,10 +156,10 @@ async function startGame(game, client) {
     .setTimestamp();
 
   try {
-    await game.lobbyMsg.edit({ embeds: [progress], components: [] });
+    await game.lobbyMsg.edit({ embeds: [progress], components: [showHandRow(game.gameId)] });
   } catch {}
 
-  // All might already be done (e.g. blackjacks or all DMs closed)
+  // If all already done (e.g. all blackjacks) resolve immediately
   await checkAllDone(game, client);
 }
 
@@ -309,4 +286,5 @@ module.exports = {
   lobbyButtons,
   playerHandEmbed,
   hitStandRow,
+  showHandRow,
 };
