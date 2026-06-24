@@ -1,3 +1,7 @@
 node_modules/
 .env
 data/checks.json
+temp_zip/
+bot.zip
+upload.js
+setup_db.js
