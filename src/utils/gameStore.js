@@ -7,12 +7,12 @@ const games = new Map(); // gameId -> game object
 
 function createGame(data) {
   const game = {
-    ...data,
-    players: {},
-    deck:    [],
-    dealer:  { hand: [] },
-    phase:   'lobby',
+    players:  {},
+    deck:     [],
+    dealer:   { hand: [] },
+    phase:    'lobby',
     lobbyMsg: null,
+    ...data,   // caller overrides defaults (including phase)
   };
   games.set(data.gameId, game);
   return game;

@@ -55,9 +55,11 @@ function tableEmbed(game) {
 
   fields.push({
     name: '👥 Players',
-    value: players.map(p =>
-      `${p.folded ? '~~' : ''}<@${p.userId}>${p.folded ? '~~ (folded)' : ''} — bet: **${(p.roundBet || 0).toLocaleString()}**`
-    ).join('\n')
+    value: players.map(p => {
+      if (p.folded) return `~~<@${p.userId}>~~ (folded)`;
+      const betStr = (p.roundBet || 0) > 0 ? `bet: **${(p.roundBet).toLocaleString()}**` : (p.hasActed ? '✅ checked' : '⏳ waiting');
+      return `<@${p.userId}> — ${betStr}`;
+    }).join('\n')
   });
 
   if (currentPlayer && phase !== 'showdown') {
@@ -90,6 +92,7 @@ async function startGame(game, client) {
     p.hand = [deck.shift(), deck.shift()];
     p.folded = false;
     p.roundBet = 0;
+    p.hasActed = false;
     p.totalBet = game.bet; // they already paid buy-in
   }
 
@@ -131,8 +134,8 @@ async function advancePhase(game, client) {
     return resolveGame(game, client, activePlayers);
   }
 
-  // Reset round bets
-  for (const p of Object.values(game.players)) p.roundBet = 0;
+  // Reset round bets and acted flags
+  for (const p of Object.values(game.players)) { p.roundBet = 0; p.hasActed = false; }
 
   // Deal community cards
   const newCards = [];

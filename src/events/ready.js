@@ -10,14 +10,24 @@ module.exports = {
     console.log(`✅ Logged in as ${client.user.tag}`);
 
     // Resolve any checks that expired while the bot was offline
-    for (const check of getAllChecks()) {
-      if (Date.now() >= check.endsAt) await resolveCheck(client, check);
+    try {
+      const checks = await getAllChecks();
+      for (const check of checks) {
+        if (Date.now() >= check.endsAt) await resolveCheck(client, check);
+      }
+    } catch (err) {
+      console.error('[ActivityCheck] Failed to load checks on startup:', err.message);
     }
 
     // Poll every 60 seconds for newly expired checks
     setInterval(async () => {
-      for (const check of getAllChecks()) {
-        if (Date.now() >= check.endsAt) await resolveCheck(client, check);
+      try {
+        const checks = await getAllChecks();
+        for (const check of checks) {
+          if (Date.now() >= check.endsAt) await resolveCheck(client, check);
+        }
+      } catch (err) {
+        console.error('[ActivityCheck] Poll error:', err.message);
       }
     }, POLL_INTERVAL);
   },

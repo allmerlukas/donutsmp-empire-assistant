@@ -1,38 +1,38 @@
 /**
- * checksStore.js — persists active activity checks to data/checks.json
+ * checksStore.js — persists active activity checks to Supabase
+ * All functions are async so data survives bot restarts.
  */
 
-const fs   = require('fs');
-const path = require('path');
+const supabase = require('./supabase');
 
-const FILE = path.join(__dirname, '..', '..', 'data', 'checks.json');
+const TABLE = 'activity_checks';
 
-function load() {
-  try {
-    if (!fs.existsSync(FILE)) return {};
-    return JSON.parse(fs.readFileSync(FILE, 'utf8'));
-  } catch { return {}; }
+async function addCheck({ guildId, channelId, messageId, logChannelId, endsAt, intervalHours }) {
+  await supabase.from(TABLE).upsert({
+    message_id:    messageId,
+    guild_id:      guildId,
+    channel_id:    channelId,
+    log_channel_id: logChannelId,
+    ends_at:       endsAt,
+    interval_hours: intervalHours ?? null,
+  });
 }
 
-function save(data) {
-  fs.mkdirSync(path.dirname(FILE), { recursive: true });
-  fs.writeFileSync(FILE, JSON.stringify(data, null, 2));
+async function removeCheck(messageId) {
+  await supabase.from(TABLE).delete().eq('message_id', messageId);
 }
 
-function addCheck({ guildId, channelId, messageId, logChannelId, endsAt }) {
-  const data = load();
-  data[messageId] = { guildId, channelId, messageId, logChannelId, endsAt };
-  save(data);
-}
-
-function removeCheck(messageId) {
-  const data = load();
-  delete data[messageId];
-  save(data);
-}
-
-function getAllChecks() {
-  return Object.values(load());
+async function getAllChecks() {
+  const { data, error } = await supabase.from(TABLE).select('*');
+  if (error || !data) return [];
+  return data.map(r => ({
+    guildId:      r.guild_id,
+    channelId:    r.channel_id,
+    messageId:    r.message_id,
+    logChannelId: r.log_channel_id,
+    endsAt:       Number(r.ends_at),
+    intervalHours: r.interval_hours ?? null,
+  }));
 }
 
 module.exports = { addCheck, removeCheck, getAllChecks };

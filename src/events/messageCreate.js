@@ -7,7 +7,7 @@ module.exports = {
     if (message.author.bot) return;
     if (!message.guild) return;
 
-    const newLevel = addMessageXp(message.author.id);
+    const newLevel = await addMessageXp(message.author.id);
 
     if (newLevel) {
       try {

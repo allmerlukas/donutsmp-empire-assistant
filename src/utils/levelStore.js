@@ -39,7 +39,7 @@ async function addMessageXp(userId) {
   cooldowns.set(userId, now);
 
   const data = await getUserLevel(userId);
-  const xpGained = Math.floor(Math.random() * 11) + 15; // 15–25 XP
+  const xpGained = Math.floor(Math.random() * 6) + 5; // 5–10 XP per message
   data.xp += xpGained;
 
   let leveledUp = false;

@@ -130,7 +130,7 @@ async function resolveCheck(client, check) {
       try {
         const newMsg = await channel.send({ embeds: [newEmbed] });
         await newMsg.react('✅');
-        addCheck({
+        await addCheck({
           guildId:      check.guildId,
           channelId:    check.channelId,
           messageId:    newMsg.id,
@@ -146,7 +146,7 @@ async function resolveCheck(client, check) {
   } catch (err) {
     console.error(`[ActivityCheck] Error resolving check ${messageId}:`, err.message);
   } finally {
-    removeCheck(messageId);
+    await removeCheck(messageId);
   }
 }
 

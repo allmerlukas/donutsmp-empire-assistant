@@ -77,7 +77,7 @@ module.exports = {
       return interaction.editReply({ content: `❌ Failed to send activity check: ${err.message}` });
     }
 
-    addCheck({
+    await addCheck({
       guildId:       interaction.guildId,
       channelId:     channel.id,
       messageId:     msg.id,
