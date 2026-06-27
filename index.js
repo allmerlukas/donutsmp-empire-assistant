@@ -13,12 +13,30 @@ const client = new Client({
   ],
   makeCache: Options.cacheWithLimits({
     ...Options.DefaultMakeCacheSettings,
-    MessageManager: 10,
+    MessageManager: 0,
     PresenceManager: 0,
     ThreadManager: 0,
-    GuildMemberManager: 50,
-    UserManager: 50,
+    GuildMemberManager: 0,
+    UserManager: 0,
+    ReactionManager: 0,
+    GuildBanManager: 0,
+    GuildInviteManager: 0,
+    GuildEmojiManager: 0,
+    GuildStickerManager: 0,
+    VoiceStateManager: 0,
+    GuildScheduledEventManager: 0,
   }),
+  sweepers: {
+    ...Options.DefaultSweeperSettings,
+    messages: {
+      interval: 3600,
+      lifetime: 1800,
+    },
+    users: {
+      interval: 3600,
+      filter: () => user => user.id !== client.user.id,
+    },
+  },
 });
 
 client.commands = new Collection();
