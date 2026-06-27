@@ -294,7 +294,7 @@ async function handleRussianRoulette(interaction, client, action, gameId) {
         .setColor(0xED4245)
         .setTitle('💥 BANG! The Bullet Found Its Mark!')
         .setDescription(
-          `<@${interaction.user.id}> pulled the trigger on **chamber ${game.chamberPosition + 1}** — and met their end!\n\n` +
+          `<@${interaction.user.id}> pulled the trigger on **chamber ${7 - game.chambersRemaining}** — and met their end!\n\n` +
           `💀 **Eliminated:** <@${interaction.user.id}>\n` +
           `❤️ **Survivors:** ${stillAlive.length}\n` +
           `💰 **Pot:** ${game.pot.toLocaleString()} coins\n\n` +
@@ -335,7 +335,7 @@ async function handleRussianRoulette(interaction, client, action, gameId) {
 
     } else {
       // ── SURVIVED ─────────────────────────────────────────────────────────
-      const chamberNum = game.chamberPosition + 1; // 1-indexed, the chamber they just pulled
+      const chamberNum = 7 - game.chambersRemaining; // 1-indexed, the chamber they just pulled
 
       const clickEmbed = new EmbedBuilder()
         .setColor(0x57F287)
@@ -355,7 +355,7 @@ async function handleRussianRoulette(interaction, client, action, gameId) {
 
       const nextAlive = Object.values(game.players).filter(p => !p.eliminated);
       const nextPlayer = nextAlive[game.currentTurn % nextAlive.length];
-      const nextChamber = game.chamberPosition + 1;
+      const nextChamber = 7 - game.chambersRemaining;
 
       // Brief pause for drama
       await new Promise(r => setTimeout(r, 1500));
