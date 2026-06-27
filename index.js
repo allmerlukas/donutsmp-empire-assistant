@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, Collection } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, Options } = require('discord.js');
 const fs   = require('fs');
 const path = require('path');
 
@@ -11,6 +11,14 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
   ],
+  makeCache: Options.cacheWithLimits({
+    ...Options.DefaultMakeCacheSettings,
+    MessageManager: 10,
+    PresenceManager: 0,
+    ThreadManager: 0,
+    GuildMemberManager: 50,
+    UserManager: 50,
+  }),
 });
 
 client.commands = new Collection();
